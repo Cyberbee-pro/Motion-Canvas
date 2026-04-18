@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FreeFace — Live Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #050810;
+  --panel:  #0b0f1a;
+  --border: rgba(99,179,237,0.12);
+  --blue:   #63b3ed;
+  --cyan:   #4fd1c5;
+  --green:  #68d391;
+  --yellow: #f6e05e;
+  --red:    #fc8181;
+  --text:   #e2e8f0;
+  --muted:  rgba(226,232,240,0.4);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Animated grid background */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
+
+/* Glow orb */
+body::after {
+  content: '';
+  position: fixed;
+  width: 600px; height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(99,179,237,0.06) 0%, transparent 70%);
+  top: -200px; left: -200px;
+  pointer-events: none;
+  animation: drift 8s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from { transform: translate(0,0); }
+  to   { transform: translate(80px, 60px); }
+}
+
+/* ─── HEADER ─── */
+header {
+  padding: 32px 48px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 16px;
+}
+
+.logo-icon {
+  width: 44px; height: 44px;
+  border: 2px solid var(--blue);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-icon::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(99,179,237,0.15), transparent);
+}
+
+.logo-text { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+.logo-text span { color: var(--blue); }
+
+.logo-sub {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 2px; text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.status-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 18px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-family: 'Space Mono', monospace;
+  font-size: 11px; color: var(--muted);
+}
+
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(104,211,145,0.4); }
+  50%      { opacity: 0.7; box-shadow: 0 0 0 6px rgba(104,211,145,0); }
+}
+
+/* ─── MAIN GRID ─── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: auto auto;
+  gap: 20px;
+  padding: 32px 48px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ─── CARDS ─── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+
+.card:hover { border-color: rgba(99,179,237,0.25); }
+
+.card-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px; letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.card-value {
+  font-size: 52px; font-weight: 800;
+  letter-spacing: -2px; line-height: 1;
+  color: var(--blue);
+}
+
+.card-unit {
+  font-size: 14px; font-weight: 400;
+  color: var(--muted); margin-left: 4px;
+}
+
+.card-sub {
+  font-size: 12px; color: var(--muted);
+  margin-top: 8px;
+  font-family: 'Space Mono', monospace;
+}
+
+.card-glow {
+  position: absolute;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  top: -40px; right: -40px;
+  opacity: 0.06;
+}
+
+.card.blue  .card-glow { background: var(--blue); }
+.card.green .card-glow { background: var(--green); }
+.card.cyan  .card-glow { background: var(--cyan); }
+.card.yellow .card-glow { background: var(--yellow); }
+.card.red   .card-glow { background: var(--red); }
+
+/* ─── GAZE MAP ─── */
+.card.wide { grid-column: span 2; }
+
+.gaze-wrap {
+  aspect-ratio: 16/9;
+  background: rgba(99,179,237,0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.gaze-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(99,179,237,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(99,179,237,0.06) 1px, transparent 1px);
+  background-size: 25% 25%;
+}
+
+.gaze-zones {
+  position: absolute; inset: 0;
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+}
+
+.zone {
+  border: 1px solid rgba(99,179,237,0.04);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 9px; color: rgba(99,179,237,0.2);
+  text-transform: uppercase; letter-spacing: 1px;
+}
+
+.gaze-cursor {
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 0 20px rgba(99,179,237,0.8), 0 0 40px rgba(99,179,237,0.3);
+  transform: translate(-50%, -50%);
+  transition: left 0.05s, top 0.05s;
+  pointer-events: none;
+}
+
+.gaze-trail {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(99,179,237,0.15);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: fade-trail 1s forwards;
+}
+
+@keyframes fade-trail {
+  from { width: 10px; height: 10px; opacity: 0.4; }
+  to   { width: 40px; height: 40px; opacity: 0; }
+}
+
+/* ─── ACTION LOG ─── */
+.log-wrap {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.log-item {
+  display: flex; gap: 12px; align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(99,179,237,0.05);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  animation: slide-in 0.2s ease;
+}
+
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.log-time { color: var(--muted); min-width: 64px; }
+.log-badge {
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  min-width: 90px; text-align: center;
+}
+
+.badge-GAZE_MOVE   { background: rgba(99,179,237,0.15);  color: var(--blue); }
+.badge-LEFT_CLICK  { background: rgba(104,211,145,0.15); color: var(--green); }
+.badge-DOUBLE_CLICK{ background: rgba(104,211,145,0.2);  color: var(--green); }
+.badge-RIGHT_CLICK { background: rgba(246,224,94,0.15);  color: var(--yellow); }
+.badge-SCROLL_UP   { background: rgba(79,209,197,0.15);  color: var(--cyan); }
+.badge-SCROLL_DOWN { background: rgba(79,209,197,0.15);  color: var(--cyan); }
+.badge-DWELL_CLICK { background: rgba(99,179,237,0.2);   color: var(--blue); }
+.badge-NOD_DOWN    { background: rgba(79,209,197,0.15);  color: var(--cyan); }
+.badge-NOD_UP      { background: rgba(79,209,197,0.15);  color: var(--cyan); }
+.badge-BROW_RAISE  { background: rgba(246,224,94,0.15);  color: var(--yellow); }
+.badge-MOUTH_OPEN  { background: rgba(252,129,129,0.15); color: var(--red); }
+.badge-KEYBOARD    { background: rgba(252,129,129,0.15); color: var(--red); }
+
+.log-msg { color: rgba(226,232,240,0.65); flex: 1; }
+
+/* ─── CONTROLS PANEL ─── */
+.card.full { grid-column: span 3; }
+
+.controls-grid {
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  gap: 12px; margin-top: 8px;
+}
+
+.toggle-btn {
+  padding: 14px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px; letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+}
+
+.toggle-btn .icon { font-size: 20px; }
+.toggle-btn.on { background: rgba(99,179,237,0.1); border-color: rgba(99,179,237,0.4); color: var(--blue); }
+.toggle-btn:hover { border-color: rgba(99,179,237,0.3); color: var(--text); }
+
+.calib-btn {
+  padding: 14px 32px;
+  background: transparent;
+  border: 1px solid var(--cyan);
+  border-radius: 12px;
+  color: var(--cyan);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px; letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 12px;
+}
+
+.calib-btn:hover { background: rgba(79,209,197,0.1); }
+
+/* ─── FATIGUE BAR ─── */
+.fatigue-bar {
+  width: 100%; height: 6px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px; overflow: hidden;
+  margin-top: 14px;
+}
+
+.fatigue-fill {
+  height: 100%; border-radius: 3px;
+  background: var(--green);
+  transition: width 1s, background 0.5s;
+}
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 1100px) {
+  .grid { grid-template-columns: 1fr 1fr; padding: 20px; }
+  .card.wide, .card.full { grid-column: span 2; }
+  .controls-grid { grid-template-columns: repeat(3, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">👁</div>
+    <div>
+      <div class="logo-text">Free<span>Face</span></div>
+      <div class="logo-sub">Assistive OS Controller — Live Monitor</div>
+    </div>
+  </div>
+  <div class="status-pill">
+    <div class="status-dot" id="dot"></div>
+    <span id="status-text">CONNECTING...</span>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- Frames processed -->
+  <div class="card blue">
+    <div class="card-glow"></div>
+    <div class="card-label">Frames Processed</div>
+    <div class="card-value" id="frames">0</div>
+    <div class="card-sub">total since session start</div>
+  </div>
+
+  <!-- Blinks -->
+  <div class="card green">
+    <div class="card-glow"></div>
+    <div class="card-label">Blink Events</div>
+    <div class="card-value" id="blinks">0</div>
+    <div class="card-sub">intentional blinks detected</div>
+  </div>
+
+  <!-- Dwell progress -->
+  <div class="card cyan">
+    <div class="card-glow"></div>
+    <div class="card-label">Dwell Progress</div>
+    <div class="card-value" id="dwell">0<span class="card-unit">%</span></div>
+    <div class="card-sub">toward next dwell click</div>
+  </div>
+
+  <!-- Gaze map -->
+  <div class="card wide">
+    <div class="card-label">Gaze Map — Screen Position</div>
+    <div class="gaze-wrap" id="gaze-wrap">
+      <div class="gaze-grid"></div>
+      <div class="gaze-zones">
+        <div class="zone">top-left</div>   <div class="zone">top</div>   <div class="zone">top-right</div>
+        <div class="zone">left</div>       <div class="zone">center</div><div class="zone">right</div>
+        <div class="zone">bot-left</div>   <div class="zone">bottom</div><div class="zone">bot-right</div>
+      </div>
+      <div class="gaze-cursor" id="cursor" style="left:50%;top:50%"></div>
+    </div>
+  </div>
+
+  <!-- Action log -->
+  <div class="card">
+    <div class="card-label">Action Log</div>
+    <div class="log-wrap" id="log-wrap">
+      <div class="log-item">
+        <span class="log-time">—:—:—</span>
+        <span class="log-badge badge-GAZE_MOVE">WAITING</span>
+        <span class="log-msg">Waiting for FreeFace engine...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="card full">
+    <div class="card-label">Controller Settings</div>
+    <div class="controls-grid">
+      <button class="toggle-btn on" id="btn-gaze" onclick="toggle('gaze')">
+        <span class="icon">👁️</span>Gaze Tracking
+      </button>
+      <button class="toggle-btn on" id="btn-blink" onclick="toggle('blink')">
+        <span class="icon">😑</span>Blink Click
+      </button>
+      <button class="toggle-btn on" id="btn-head" onclick="toggle('head')">
+        <span class="icon">↕️</span>Head Nod
+      </button>
+      <button class="toggle-btn on" id="btn-expr" onclick="toggle('expr')">
+        <span class="icon">🤨</span>Expression
+      </button>
+      <button class="toggle-btn" id="btn-dwell" onclick="toggle('dwell')">
+        <span class="icon">⏱️</span>Dwell Click
+      </button>
+    </div>
+
+    <div style="margin-top:20px">
+      <div class="card-label">Eye Strain Monitor</div>
+      <div class="fatigue-bar"><div class="fatigue-fill" id="fatigue-fill" style="width:100%"></div></div>
+      <div class="card-sub" id="fatigue-label" style="margin-top:6px">Eyes: Good</div>
+    </div>
+
+    <button class="calib-btn" onclick="calibrate()">⟳ Recalibrate</button>
+  </div>
+
+</div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────
+const state = {
+  frames:  0,
+  blinks:  0,
+  dwell:   0,
+  fatigued: false,
+  features: { gaze:true, blink:true, head:true, expr:true, dwell:false },
+  connected: false,
+};
+
+let gazeX = 0.5, gazeY = 0.5;
+let logEntries = [];
+
+// ── Poll engine stats every 500ms ─────────────────────────────────
+async function pollStats() {
+  try {
+    const r = await fetch("http://localhost:5050/stats");
+    if (!r.ok) throw new Error();
+    const d = await r.json();
+    state.frames   = d.frames   ?? state.frames;
+    state.blinks   = d.blinks   ?? state.blinks;
+    state.dwell    = d.dwell    ?? state.dwell;
+    state.fatigued = d.fatigued ?? state.fatigued;
+    state.connected = true;
+    updateStats();
+  } catch {
+    state.connected = false;
+  }
+  updateConnectionStatus();
+}
+
+function updateConnectionStatus() {
+  const dot  = document.getElementById('dot');
+  const txt  = document.getElementById('status-text');
+  if (state.connected) {
+    dot.style.background = 'var(--green)';
+    txt.textContent = 'LIVE';
+  } else {
+    dot.style.background = 'var(--red)';
+    dot.style.animation  = 'none';
+    txt.textContent = 'ENGINE OFFLINE';
+  }
+}
+
+function updateStats() {
+  document.getElementById('frames').textContent = state.frames.toLocaleString();
+  document.getElementById('blinks').textContent = state.blinks;
+  document.getElementById('dwell').innerHTML =
+    state.dwell + '<span class="card-unit">%</span>';
+
+  // Fatigue: noBlinkFrames as % (engine sets this)
+  const fatigueEl = document.getElementById('fatigue-fill');
+  const fatigueLabel = document.getElementById('fatigue-label');
+  if (state.fatigued) {
+    fatigueEl.style.width      = '15%';
+    fatigueEl.style.background = 'var(--red)';
+    fatigueLabel.textContent   = '⚠ Eye strain detected — please take a break';
+    fatigueLabel.style.color   = 'var(--red)';
+  } else {
+    fatigueEl.style.width      = '85%';
+    fatigueEl.style.background = 'var(--green)';
+    fatigueLabel.textContent   = 'Eyes: Good';
+    fatigueLabel.style.color   = 'var(--muted)';
+  }
+}
+
+// ── Simulate gaze movement (demo mode when engine is offline) ──────
+function simulateGaze() {
+  if (!state.connected) {
+    const t = Date.now() / 1000;
+    gazeX = 0.5 + Math.sin(t * 0.7) * 0.3;
+    gazeY = 0.5 + Math.cos(t * 0.5) * 0.25;
+    updateCursor(gazeX, gazeY);
+    addLog('GAZE_MOVE', `x:${gazeX.toFixed(2)} y:${gazeY.toFixed(2)} [DEMO]`);
+  }
+}
+
+function updateCursor(x, y) {
+  const cursor = document.getElementById('cursor');
+  cursor.style.left = (x * 100) + '%';
+  cursor.style.top  = (y * 100) + '%';
+
+  // Trail
+  const wrap = document.getElementById('gaze-wrap');
+  const trail = document.createElement('div');
+  trail.className = 'gaze-trail';
+  trail.style.left = (x * 100) + '%';
+  trail.style.top  = (y * 100) + '%';
+  wrap.appendChild(trail);
+  setTimeout(() => trail.remove(), 1000);
+}
+
+// ── Action log ────────────────────────────────────────────────────
+function addLog(label, msg) {
+  const now  = new Date();
+  const time = now.toTimeString().split(' ')[0];
+  logEntries.unshift({ time, label, msg });
+  if (logEntries.length > 30) logEntries.pop();
+
+  const wrap = document.getElementById('log-wrap');
+  const cls  = 'badge-' + label.replace(/→.*/,'').trim().replace(/ /g,'_');
+  const html = logEntries.slice(0, 20).map(e => `
+    <div class="log-item">
+      <span class="log-time">${e.time}</span>
+      <span class="log-badge ${cls}">${e.label.substring(0,14)}</span>
+      <span class="log-msg">${e.msg}</span>
+    </div>`).join('');
+  wrap.innerHTML = html;
+}
+
+// ── Toggle feature buttons ─────────────────────────────────────────
+function toggle(key) {
+  state.features[key] = !state.features[key];
+  const btn = document.getElementById('btn-' + key);
+  btn.classList.toggle('on', state.features[key]);
+  addLog('GAZE_MOVE', `${key} → ${state.features[key] ? 'ON' : 'OFF'}`);
+  if (socket && socket.connected)
+    socket.emit('toggle_feature', { feature: key, enabled: state.features[key] });
+}
+
+function calibrate() {
+  addLog('GAZE_MOVE', 'Calibration requested — look at screen center');
+  if (socket && socket.connected)
+    socket.emit('calibrate', {});
+}
+
+// ── Demo: simulate random actions ─────────────────────────────────
+const DEMO_ACTIONS = [
+  ['LEFT_CLICK',  'Blink detected → left click'],
+  ['NOD_DOWN',    'Head nod down → scroll down'],
+  ['BROW_RAISE',  'Eyebrow raised → right click'],
+  ['DWELL_CLICK', 'Dwell complete → click'],
+  ['MOUTH_OPEN',  'Mouth open → virtual keyboard'],
+];
+
+let demoIdx = 0;
+function demoAction() {
+  if (!state.connected) {
+    const [label, msg] = DEMO_ACTIONS[demoIdx % DEMO_ACTIONS.length];
+    addLog(label, msg);
+    state.frames += Math.floor(Math.random() * 15 + 5);
+    if (label === 'LEFT_CLICK' || label === 'DWELL_CLICK') state.blinks++;
+    state.dwell = Math.floor(Math.random() * 100);
+    updateStats();
+    demoIdx++;
+  }
+}
+
+// ── WebSocket connection ──────────────────────────────────────────
+let socket = null;
+
+function connectWebSocket() {
+  try {
+    // Load Socket.IO client dynamically
+    const script = document.createElement('script');
+    script.src = 'https://cdn.socket.io/4.7.2/socket.io.min.js';
+    script.onload = () => {
+      socket = io('http://localhost:5050', { timeout: 3000 });
+
+      socket.on('connect', () => {
+        state.connected = true;
+        updateConnectionStatus();
+        addLog('GAZE_MOVE', 'Connected to FreeFace engine via WebSocket');
+        // Stop demo loop
+        clearInterval(demoTimer);
+        clearInterval(gazeTimer);
+      });
+
+      socket.on('disconnect', () => {
+        state.connected = false;
+        updateConnectionStatus();
+        // Restart demo if engine disconnects
+        startDemo();
+      });
+
+      socket.on('gaze', (d) => {
+        updateCursor(d.x, d.y);
+      });
+
+      socket.on('action', (d) => {
+        addLog(d.label, actionDesc(d.type));
+      });
+
+      socket.on('stats', (d) => {
+        state.frames   = d.frames   ?? state.frames;
+        state.blinks   = d.blinks   ?? state.blinks;
+        state.dwell    = d.dwell    ?? state.dwell;
+        state.fatigued = d.fatigued ?? state.fatigued;
+        updateStats();
+      });
+
+      socket.on('calib_started', () => {
+        addLog('GAZE_MOVE', 'Calibration started — look at screen center');
+      });
+    };
+    script.onerror = () => startDemo();  // no network = demo mode
+    document.head.appendChild(script);
+  } catch(e) {
+    startDemo();
+  }
+}
+
+function actionDesc(type) {
+  const descs = {
+    1: 'Moving cursor via gaze',   2: 'Left click (blink)',
+    3: 'Right click (brow raise)', 4: 'Double click',
+    5: 'Scroll up (nod)',          6: 'Scroll down (nod)',
+    7: 'Enter key',                8: 'Escape key',
+    9: 'Space key',                10: 'Dwell click',
+    11: 'Opening virtual keyboard',
+  };
+  return descs[type] || 'Unknown action';
+}
+
+// ── Demo mode (when engine is offline) ────────────────────────────
+let demoTimer = null, gazeTimer = null;
+
+function startDemo() {
+  gazeTimer = setInterval(simulateGaze, 100);
+  demoTimer = setInterval(demoAction, 2000);
+}
+
+// ── Start ─────────────────────────────────────────────────────────
+updateStats();
+addLog('GAZE_MOVE', 'Dashboard loaded — connecting to FreeFace engine...');
+startDemo();         // start demo immediately; stops when socket connects
+connectWebSocket();  // attempt WebSocket connection
+</script>
+</body>
+</html>
