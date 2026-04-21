@@ -2,6 +2,14 @@ CXX      = g++
 CXXFLAGS = -std=c++17 -O2 -Wall -fPIC -Icpp/include
 TARGET   = engine.so
 
+ifneq ("$(wildcard venv/bin/python3)","")
+PYTHON := $(abspath venv/bin/python3)
+else ifneq ("$(wildcard ../venv/bin/python3)","")
+PYTHON := $(abspath ../venv/bin/python3)
+else
+PYTHON := python3
+endif
+
 SRCS = cpp/src/Detectors.cpp \
        cpp/src/FreeFaceEngine.cpp \
        cpp/src/engine_api.cpp
@@ -18,32 +26,32 @@ test: $(TARGET)
 	@echo ""
 	@echo "Running FreeFace Unit Tests"
 	@echo ""
-	python3 test.py
+	"$(PYTHON)" test.py
 	@echo ""
 
 test-engine:
-	@python3 test.py engine
+	@"$(PYTHON)" test.py engine
 
 test-camera:
-	@python3 test.py camera
+	@"$(PYTHON)" test.py camera
 
 test-mediapipe:
-	@python3 test.py mediapipe
+	@"$(PYTHON)" test.py mediapipe
 
 test-gaze:
-	@python3 test.py gaze
+	@"$(PYTHON)" test.py gaze
 
 test-blink:
-	@python3 test.py blink
+	@"$(PYTHON)" test.py blink
 
 test-voice:
-	@python3 test.py voice
+	@"$(PYTHON)" test.py voice
 
 test-keyboard:
-	@python3 test.py keyboard
+	@"$(PYTHON)" test.py keyboard
 
 test-os:
-	@python3 test.py os
+	@"$(PYTHON)" test.py os
 
 clean:
 	rm -f $(TARGET)

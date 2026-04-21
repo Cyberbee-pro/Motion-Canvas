@@ -76,6 +76,13 @@ def draw_hud(frame, label, calib, calib_pct, fatigued, dwell_pct):
 
 
 def main():
+    if sys.version_info >= (3, 13):
+        print("[FreeFace] Python 3.13+ detected.")
+        print("[FreeFace] Linux face tracking currently needs Python 3.10-3.12.")
+        print("[FreeFace] Available MediaPipe wheels on newer Python versions")
+        print("[FreeFace] do not expose mp.solutions.face_mesh for this codebase.")
+        sys.exit(1)
+
     from face_mesh import FaceMesh
     from engine_bridge import FreeFaceEngine, ActionType
     from os_control import OSController
@@ -101,6 +108,14 @@ def main():
     else:
         print("[FreeFace] No profile — starting calibration")
         engine.start_calibration()
+
+    try:
+        mesh = FaceMesh(process_every_n=PROCESS_EVERY_N)
+    except Exception as e:
+        print(f"[FaceMesh] Cannot start: {e}")
+        print("[FreeFace] Face tracking requires a compatible MediaPipe build.")
+        print("[FreeFace] On Linux, use Python 3.10-3.12 for the current codebase.")
+        sys.exit(1)
 
     os_ctrl = None
     try:
@@ -139,7 +154,6 @@ def main():
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
     cap.set(cv2.CAP_PROP_FPS, 30)
 
-    mesh       = FaceMesh(process_every_n=PROCESS_EVERY_N)
     last_label = "STARTING"
     frame_ctr  = 0
 

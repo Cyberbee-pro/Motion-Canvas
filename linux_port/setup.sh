@@ -33,7 +33,8 @@ echo "Detected Python ${PY_VER}"
 case "$PY_VER" in
   3.13|3.14|3.15)
     echo "WARN: MediaPipe and PyAudio can be less reliable on Python ${PY_VER}."
-    echo "      Linux users generally have the best results on Python 3.10-3.12."
+    echo "      FreeFace face tracking currently needs Python 3.10-3.12 on Linux."
+    echo "      Newer Python versions only get MediaPipe wheels without mp.solutions.face_mesh."
     ;;
 esac
 

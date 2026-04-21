@@ -13,6 +13,20 @@ import mediapipe as mp
 import numpy as np
 from typing import Optional
 
+
+def _missing_solutions_message() -> str:
+    version = getattr(mp, "__version__", "unknown")
+    return (
+        "This installed MediaPipe build does not provide 'mp.solutions.face_mesh'. "
+        f"Detected mediapipe=={version}. "
+        "On Python 3.14, currently available MediaPipe wheels are tasks-only and "
+        "do not support this project's FaceMesh API. "
+        "Use Python 3.10-3.12 with a classic MediaPipe solutions build "
+        "(for example the versions this project was originally developed against), "
+        "or provide a separate Face Landmarker model and rewrite the pipeline for "
+        "the tasks API."
+    )
+
 class FaceMesh:
     def __init__(self, process_every_n: int = 2):
         """
@@ -20,6 +34,8 @@ class FaceMesh:
             1 = process every frame (30fps on most webcams)
             2 = process every other frame (15fps) ← default, recommended
         """
+        if not hasattr(mp, "solutions") or not hasattr(mp.solutions, "face_mesh"):
+            raise RuntimeError(_missing_solutions_message())
         self._mp = mp.solutions.face_mesh
         self._mesh = self._mp.FaceMesh(
             max_num_faces       = 1,           # we only track one user
