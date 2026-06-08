@@ -95,10 +95,10 @@ def main():
         sys.exit(1)
 
     if engine.load_profile(PROFILE_PATH):
-        print("[FreeFace] Saved profile loaded")
+        print("[FreeFace] Saved profile loaded — refreshing live calibration")
     else:
         print("[FreeFace] No profile — starting calibration")
-        engine.start_calibration()
+    engine.start_calibration()
 
     os_ctrl = OSController(sw, sh)
     vkb     = VirtualKeyboard()
